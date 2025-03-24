@@ -1,5 +1,5 @@
-// src/app/components/formulario-img/formulario-img.component.ts
-import { Component, EventEmitter, Output } from '@angular/core';
+// formulario-img.component.ts
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ImageService, ImageDto } from '../../services/image.service';
 import { FormsModule } from '@angular/forms';
 
@@ -8,17 +8,26 @@ import { FormsModule } from '@angular/forms';
   standalone: true,
   imports: [FormsModule],
   templateUrl: './formulario-img.component.html',
-  styleUrls: ['./formulario-img.component.css']
+  styleUrls: ['./formulario-img.component.css'],
 })
 export class FormularioImgComponent {
+  @Input() editImage: ImageDto | null = null;
+  @Output() close = new EventEmitter<void>();
+
   name: string = '';
   description: string = '';
   file: File | null = null;
   uploadSuccess: boolean = false;
   errorMessage: string = '';
-  @Output() close = new EventEmitter<void>();
 
   constructor(private imageService: ImageService) {}
+
+  ngOnChanges(): void {
+    if (this.editImage) {
+      this.name = this.editImage.name;
+      this.description = this.editImage.description || '';
+    }
+  }
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -28,43 +37,56 @@ export class FormularioImgComponent {
   }
 
   onSubmit(): void {
-    if (!this.file || !this.name) {
-      this.errorMessage = 'Name and file are required';
+    if (!this.name) {
+      this.errorMessage = 'Name is required';
       return;
     }
-  
-    const formData = new FormData();
-    formData.append('file', this.file);
-    formData.append('name', this.name);
-    if (this.description) {
-      formData.append('description', this.description);
-    }
-  
-    this.imageService.uploadImage(formData).subscribe({
-      next: (response) => {
-        // console.log('URL devuelta por el backend:', response.url);
-        const newImage: ImageDto = {
+
+    if (this.editImage && !this.file) {
+      // Update existing image without new file
+      this.imageService
+        .updateImage(this.editImage.id!, {
           name: this.name,
-          url: response.url,
           description: this.description,
-          createdAt: new Date(),
-        };
-        // Prueba la URL manualmente
-        fetch(response.url)
-          .then(res => console.log('Estado:', res.status))
-          .catch(err => console.error('Error al acceder a la URL:', err));
-        this.imageService.notifyImageUploaded(newImage);
-        this.uploadSuccess = true;
-        this.errorMessage = '';
-        this.resetForm();
-        setTimeout(() => this.close.emit(), 1000);
-      },
-      error: (error) => {
-        this.errorMessage = 'Error uploading image';
-        this.uploadSuccess = false;
-        console.error('Error al subir:', error);
-      },
-    });
+        })
+        .subscribe({
+          next: () => {
+            this.uploadSuccess = true;
+            this.close.emit();
+          },
+          error: (error) => {
+            this.errorMessage = 'Error updating image';
+            console.error('Error al actualizar:', error);
+          },
+        });
+    } else if (this.file) {
+      // Create new image or update with new file
+      const formData = new FormData();
+      formData.append('file', this.file);
+      formData.append('name', this.name);
+      if (this.description) formData.append('description', this.description);
+
+      this.imageService.uploadImage(formData).subscribe({
+        next: (response) => {
+          const newImage: ImageDto = {
+            id: this.editImage?.id,
+            name: this.name,
+            url: response.url,
+            description: this.description,
+            createdAt: this.editImage?.createdAt || new Date(),
+          };
+          this.imageService.notifyImageUploaded(newImage);
+          this.uploadSuccess = true;
+          this.errorMessage = '';
+          this.resetForm();
+          setTimeout(() => this.close.emit(), 1000);
+        },
+        error: (error) => {
+          this.errorMessage = 'Error uploading image';
+          console.error('Error al subir:', error);
+        },
+      });
+    }
   }
 
   resetForm(): void {

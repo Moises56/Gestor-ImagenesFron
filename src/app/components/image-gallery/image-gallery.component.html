@@ -1,10 +1,10 @@
-<!-- src/app/components/image-gallery/image-gallery.component.html -->
+<!-- image-gallery.component.html -->
 <div class="container mx-auto px-4 py-8">
   <div class="flex justify-between items-center mb-6">
     <h2 class="text-2xl font-bold text-gray-800">Image Gallery</h2>
     <button
       (click)="toggleForm()"
-      class="py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50"
+      class="py-2 px-4 bg-[#5ccedf] text-white rounded-md hover:bg-[#71c9ab] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50"
     >
       Add New
     </button>
@@ -14,9 +14,16 @@
   @if (showForm) {
   <div
     class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50"
+    (click)="closeForm()"
   >
-    <div class="bg-white rounded-lg shadow-md p-6 max-w-md w-full">
-      <app-formulario-img (close)="toggleForm()"></app-formulario-img>
+    <div
+      class="bg-white rounded-lg shadow-md p-6 max-w-md w-full"
+      (click)="$event.stopPropagation()"
+    >
+      <app-formulario-img
+        [editImage]="editImage"
+        (close)="closeForm()"
+      ></app-formulario-img>
     </div>
   </div>
   }
@@ -26,8 +33,7 @@
   >
     @for (image of images; track image.id) {
     <div
-      class="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
-      (click)="copyUrl(image)"
+      class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
     >
       <img
         [src]="image.url"
@@ -45,6 +51,65 @@
         @if (copiedImageId === image.id) {
         <p class="mt-2 text-sm text-green-600">URL copied to clipboard!</p>
         }
+        <div class="mt-4 flex gap-2">
+          <button
+            (click)="copyUrl(image); $event.stopPropagation()"
+            class="p-2 text-gray-600 hover:text-indigo-600"
+            title="Copy URL"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+              ></path>
+            </svg>
+          </button>
+          <button
+            (click)="toggleForm(image); $event.stopPropagation()"
+            class="p-2 text-gray-600 hover:text-indigo-600"
+            title="Edit"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              ></path>
+            </svg>
+          </button>
+          <button
+            (click)="deleteImage(image.id); $event.stopPropagation()"
+            class="p-2 text-gray-600 hover:text-red-600"
+            title="Delete"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4M9 7v12m6-12v12M3 7h18"
+              ></path>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
     }
@@ -52,5 +117,52 @@
 
   @if (images.length === 0) {
   <div class="text-center py-8 text-gray-500">No images uploaded yet</div>
+  }
+
+  <!-- Pagination -->
+  @if (totalPages > 1) {
+  <div class="flex justify-center items-center mt-6 gap-4">
+    <button
+      (click)="changePage(-1)"
+      [disabled]="currentPage === 1"
+      class="p-2 text-gray-600 hover:text-indigo-600 disabled:text-gray-300"
+    >
+      <svg
+        class="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M15 19l-7-7 7-7"
+        ></path>
+      </svg>
+    </button>
+    <span class="text-gray-700"
+      >Page {{ currentPage }} of {{ totalPages }}</span
+    >
+    <button
+      (click)="changePage(1)"
+      [disabled]="currentPage === totalPages"
+      class="p-2 text-gray-600 hover:text-indigo-600 disabled:text-gray-300"
+    >
+      <svg
+        class="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M9 5l7 7-7 7"
+        ></path>
+      </svg>
+    </button>
+  </div>
   }
 </div>
