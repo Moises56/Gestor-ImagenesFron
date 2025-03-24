@@ -1,0 +1,56 @@
+<!-- src/app/components/image-gallery/image-gallery.component.html -->
+<div class="container mx-auto px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">Image Gallery</h2>
+    <button
+      (click)="toggleForm()"
+      class="py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50"
+    >
+      Add New
+    </button>
+  </div>
+
+  <!-- Modal -->
+  @if (showForm) {
+  <div
+    class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50"
+  >
+    <div class="bg-white rounded-lg shadow-md p-6 max-w-md w-full">
+      <app-formulario-img (close)="toggleForm()"></app-formulario-img>
+    </div>
+  </div>
+  }
+
+  <div
+    class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+  >
+    @for (image of images; track image.id) {
+    <div
+      class="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+      (click)="copyUrl(image)"
+    >
+      <img
+        [src]="image.url"
+        [alt]="image.name"
+        class="w-full h-48 object-cover transition-opacity duration-300 hover:opacity-90"
+      />
+      <div class="p-4">
+        <h3 class="text-lg font-semibold text-gray-800">{{ image.name }}</h3>
+        @if (image.description) {
+        <p class="mt-2 text-gray-600">{{ image.description }}</p>
+        }
+        <p class="mt-2 text-sm text-gray-500">
+          Uploaded: {{ image.createdAt | date : "medium" }}
+        </p>
+        @if (copiedImageId === image.id) {
+        <p class="mt-2 text-sm text-green-600">URL copied to clipboard!</p>
+        }
+      </div>
+    </div>
+    }
+  </div>
+
+  @if (images.length === 0) {
+  <div class="text-center py-8 text-gray-500">No images uploaded yet</div>
+  }
+</div>
