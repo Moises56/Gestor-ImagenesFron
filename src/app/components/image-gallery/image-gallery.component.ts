@@ -30,7 +30,6 @@ export class ImageGalleryComponent implements OnInit {
     this.loadImages();
     this.imageService.onImageUploaded().subscribe({
       next: (newImage) => {
-        newImage.url = `${newImage.url}?t=${Date.now()}`;
         this.images.unshift(newImage);
       },
       error: (error) => console.error('Error en notificación:', error),
@@ -40,10 +39,7 @@ export class ImageGalleryComponent implements OnInit {
   loadImages(): void {
     this.imageService.getAllImages(this.currentPage, this.pageSize).subscribe({
       next: (response: PaginatedImages) => {
-        this.images = response.data.map((img) => ({
-          ...img,
-          url: `${img.url}?t=${Date.now()}`, // Esto debería funcionar si img.url es correcta
-        }));
+        this.images = response.data;
         this.totalPages = response.totalPages;
       },
       error: (error) => console.error('Error al cargar imágenes:', error),

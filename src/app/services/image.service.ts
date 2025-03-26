@@ -1,7 +1,7 @@
 // image.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, Subject } from 'rxjs';
+import { Observable, Subject, map } from 'rxjs';
 import { environment } from '@environments/environment';
 
 export interface ImageDto {
@@ -28,16 +28,41 @@ export class ImageService {
 
   constructor(private http: HttpClient) {}
 
+  private ensureAbsoluteUrl(url: string): string {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `${environment.apiUrl}${url}`;
+  }
+
   uploadImage(formData: FormData): Observable<ImageDto> {
-    return this.http.post<ImageDto>(`${this.apiUrl}/upload`, formData);
+    return this.http.post<ImageDto>(`${this.apiUrl}/upload`, formData).pipe(
+      map(response => ({
+        ...response,
+        url: this.ensureAbsoluteUrl(response.url)
+      }))
+    );
   }
 
   getAllImages(page: number = 1, limit: number = 10): Observable<PaginatedImages> {
-    return this.http.get<PaginatedImages>(`${this.apiUrl}?page=${page}&limit=${limit}`);
+    return this.http.get<PaginatedImages>(`${this.apiUrl}?page=${page}&limit=${limit}`).pipe(
+      map(response => ({
+        ...response,
+        data: response.data.map(img => ({
+          ...img,
+          url: this.ensureAbsoluteUrl(img.url)
+        }))
+      }))
+    );
   }
 
   updateImage(id: number, image: Partial<ImageDto>): Observable<ImageDto> {
-    return this.http.put<ImageDto>(`${this.apiUrl}/${id}`, image);
+    return this.http.put<ImageDto>(`${this.apiUrl}/${id}`, image).pipe(
+      map(response => ({
+        ...response,
+        url: this.ensureAbsoluteUrl(response.url)
+      }))
+    );
   }
 
   deleteImage(id: number): Observable<{ message: string }> {
