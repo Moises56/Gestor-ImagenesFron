@@ -1,0 +1,73 @@
+/* src/app/pages/users/users.component.css */
+:host {
+    display: block;
+  }
+  
+  button:disabled {
+    cursor: not-allowed;
+  }
+  
+  input:focus,
+  select:focus {
+    outline: none;
+  }
+  
+  .transition-colors {
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  
+  .transition-all {
+    transition: all 0.3s ease;
+  }
+  
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .hidden {
+    display: none;
+  }
+  
+  .block {
+    display: block;
+  }
+  
+  /* Ensure table rows have a consistent height */
+  table tbody tr {
+    height: 60px;
+  }
+  
+  /* Style for action buttons */
+  td button {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Adjust padding for table cells */
+  table th,
+  table td {
+    padding: 16px;
+  }
+  
+  /* Ensure the table header has a light background */
+  table thead {
+    background-color: #f7f7f7;
+  }
+  
+  /* Hover effect for table rows */
+  table tbody tr:hover {
+    background-color: #f9f9f9;
+  }
+  
+  /* Style for the modal inputs */
+  input[type="text"],
+  input[type="password"],
+  select {
+    box-sizing: border-box;
+    height: 2.5rem;
+  }

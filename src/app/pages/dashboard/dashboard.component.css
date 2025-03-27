@@ -1,0 +1,27 @@
+/* src/app/pages/dashboard/dashboard.component.css */
+.transition-colors {
+  transition: all 0.3s ease-in-out;
+}
+
+svg {
+  transition: stroke 0.3s ease;
+}
+
+nav a:hover svg {
+  stroke: #4ab2c8;
+}
+
+button:focus {
+  outline: none;
+}
+
+button:hover svg {
+  stroke: #4ab2c8;
+}
+
+@media (max-width: 639px) {
+  .w-64 {
+    width: 100%;
+    max-width: 300px;
+  }
+}

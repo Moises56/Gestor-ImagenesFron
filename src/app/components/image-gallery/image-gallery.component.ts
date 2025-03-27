@@ -1,89 +1,149 @@
-// image-gallery.component.ts
-import { Component, OnInit } from '@angular/core';
+// src/app/components/image-gallery/image-gallery.component.ts
 import {
-  ImageService,
-  ImageDto,
-  PaginatedImages,
-} from '../../services/image.service';
+  ChangeDetectorRef,
+  Component,
+  EventEmitter,
+  OnInit,
+  Output,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormularioImgComponent } from '../formulario-img/formulario-img.component';
+import { Router } from '@angular/router';
+import { ImageService } from '../../services/image.service';
+import { ToastrService } from 'ngx-toastr';
+import { AuthService } from '../../services/auth.service';
+import { Image, PaginatedResponse } from '../../interfaces/image.interface';
+import { User } from '../../interfaces/auth.interface';
 
 @Component({
   selector: 'app-image-gallery',
   standalone: true,
-  imports: [CommonModule, FormularioImgComponent],
+  imports: [CommonModule],
   templateUrl: './image-gallery.component.html',
   styleUrls: ['./image-gallery.component.css'],
 })
 export class ImageGalleryComponent implements OnInit {
-  images: ImageDto[] = [];
-  copiedImageId: number | null = null;
-  showForm: boolean = false;
-  editImage: ImageDto | null = null;
+  @Output() onDelete = new EventEmitter<Image>();
+  @Output() onEdit = new EventEmitter<Image>();
+  @Output() onAddNew = new EventEmitter<void>();
+
+  images: Image[] = [];
   currentPage: number = 1;
   totalPages: number = 1;
   pageSize: number = 10;
+  hasMore: boolean = false;
+  currentUser: User | null = null;
 
-  constructor(private imageService: ImageService) {}
+  constructor(
+    private imageService: ImageService,
+    private authService: AuthService,
+    private toastr: ToastrService,
+    private router: Router,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
-    this.loadImages();
-    this.imageService.onImageUploaded().subscribe({
-      next: (newImage) => {
-        this.images.unshift(newImage);
-      },
-      error: (error) => console.error('Error en notificación:', error),
+    this.authService.user$.subscribe((user) => {
+      this.currentUser = user;
+      if (user) {
+        this.loadImages();
+      } else {
+        this.toastr.error(
+          'Por favor, inicia sesión para ver tus imágenes.',
+          'No autenticado'
+        );
+        this.router.navigate(['/login']);
+      }
     });
   }
 
-  loadImages(): void {
-    this.imageService.getAllImages(this.currentPage, this.pageSize).subscribe({
-      next: (response: PaginatedImages) => {
-        this.images = response.data;
-        this.totalPages = response.totalPages;
+  loadImages(page: number = 1): void {
+    this.currentPage = page;
+    this.imageService.getUserImages(this.currentPage, this.pageSize).subscribe({
+      next: (response: PaginatedResponse<Image>) => {
+        console.log('Loaded images:', response.data);
+        this.images = response.data || [];
+        this.totalPages = response.pagination.totalPages || 1;
+        this.currentPage = response.pagination.page || 1;
+        this.hasMore = response.pagination.hasMore || false;
+        this.cdr.detectChanges(); // Force change detection
+        if (this.images.length === 0) {
+          this.toastr.info('No tienes imágenes subidas.', 'Información');
+        }
       },
-      error: (error) => console.error('Error al cargar imágenes:', error),
+      error: (error) => {
+        console.error('Error al cargar imágenes:', error);
+        if (error.status === 401) {
+          this.toastr.error(
+            'Sesión expirada. Por favor, inicia sesión nuevamente.',
+            'No autenticado'
+          );
+          this.authService.logout();
+          this.router.navigate(['/login']);
+        } else {
+          this.toastr.error(
+            error.message || 'Error al cargar las imágenes.',
+            'Error'
+          );
+        }
+      },
     });
   }
 
-  copyUrl(image: ImageDto): void {
-    if (image.url) {
-      navigator.clipboard.writeText(image.url).then(
-        () => {
-          this.copiedImageId = image.id ?? null;
-          setTimeout(() => (this.copiedImageId = null), 2000);
-        },
-        (err) => console.error('Failed to copy URL:', err)
-      );
-    }
-  }
-
-  toggleForm(image?: ImageDto): void {
-    this.editImage = image || null;
-    this.showForm = !this.showForm;
-  }
-
-  closeForm(): void {
-    this.showForm = false;
-    this.editImage = null;
-  }
-
-  deleteImage(id?: number): void {
-    if (id && confirm('Are you sure you want to delete this image?')) {
-      this.imageService.deleteImage(id).subscribe({
-        next: () => {
-          this.images = this.images.filter((img) => img.id !== id);
-        },
-        error: (error) => console.error('Error deleting image:', error),
+  copyUrl(url: string): void {
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        this.toastr.success('URL copiada al portapapeles!', 'Éxito', {
+          toastClass: 'ngx-toastr custom-toast',
+          positionClass: 'toast-top-right',
+          timeOut: 3000,
+          progressBar: true,
+          progressAnimation: 'increasing',
+          tapToDismiss: true,
+          extendedTimeOut: 1000,
+          enableHtml: true,
+          messageClass: 'toast-message',
+          titleClass: 'toast-title',
+          onActivateTick: false,
+          closeButton: true,
+          newestOnTop: true,
+          easing: 'ease-in',
+          easeTime: 300,
+          disableTimeOut: false,
+        });
+      })
+      .catch((err) => {
+        this.toastr.error('Error al copiar la URL', 'Error');
+        console.error('Error al copiar la URL:', err);
       });
-    }
   }
 
-  changePage(delta: number): void {
-    const newPage = this.currentPage + delta;
-    if (newPage >= 1 && newPage <= this.totalPages) {
-      this.currentPage = newPage;
-      this.loadImages();
+  handleAddNew(): void {
+    this.onAddNew.emit();
+  }
+
+  isOwner(image: Image): boolean {
+    if (!this.currentUser) {
+      return false;
     }
+    return image.userId === this.currentUser.id;
+  }
+
+  get isAdminOrModerator(): boolean {
+    if (!this.currentUser) {
+      return false;
+    }
+    return (
+      this.currentUser.role === 'ADMIN' || this.currentUser.role === 'MODERATOR'
+    );
+  }
+
+  deleteImage(image: Image) {
+    this.onDelete.emit(image);
+  }
+
+  refresh() {
+    this.currentPage = 1;
+    this.loadImages();
   }
 }

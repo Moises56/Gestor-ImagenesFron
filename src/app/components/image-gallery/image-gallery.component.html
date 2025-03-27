@@ -1,168 +1,112 @@
-<!-- image-gallery.component.html -->
-<div class="container mx-auto px-4 py-8">
-  <div class="flex justify-between items-center mb-6">
-    <h2 class="text-2xl font-bold text-gray-800">Image Gallery</h2>
+<!-- src/app/components/image-gallery/image-gallery.component.html -->
+<div class="p-4">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-bold">Image Gallery</h2>
     <button
-      (click)="toggleForm()"
-      class="py-2 px-4 bg-[#5ccedf] text-white rounded-md hover:bg-[#71c9ab] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50"
+      (click)="handleAddNew()"
+      class="px-4 py-2 bg-cyan-500 text-white rounded-full hover:bg-cyan-600 transition-colors duration-300"
     >
       Add New
     </button>
   </div>
-
-  <!-- Modal -->
-  @if (showForm) {
-  <div
-    class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50"
-    (click)="closeForm()"
-  >
-    <div
-      class="bg-white rounded-lg shadow-md p-6 max-w-md w-full"
-      (click)="$event.stopPropagation()"
-    >
-      <app-formulario-img
-        [editImage]="editImage"
-        (close)="closeForm()"
-      ></app-formulario-img>
-    </div>
+  <div *ngIf="images.length === 0" class="text-center text-gray-500">
+    No images uploaded yet
   </div>
-  }
-
   <div
+    *ngIf="images.length > 0"
     class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
   >
-    @for (image of images; track image.id) {
     <div
-      class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+      *ngFor="let image of images"
+      class="relative bg-white rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300 cursor-pointer"
+      (click)="copyUrl(image.url)"
     >
-      <img
-        [src]="image.url"
-        [alt]="image.name"
-        class="w-full h-48 object-cover transition-opacity duration-300 hover:opacity-90"
-      />
-      <div class="p-4">
-        <h3 class="text-lg font-semibold text-gray-800">{{ image.name }}</h3>
-        @if (image.description) {
-        <p class="mt-2 text-gray-600">{{ image.description }}</p>
-        }
-        <p class="mt-2 text-sm text-gray-500">
-          Uploaded: {{ image.createdAt | date : "medium" }}
-        </p>
-        @if (copiedImageId === image.id) {
-        <p class="mt-2 text-sm text-green-600">URL copied to clipboard!</p>
-        }
-        <div class="mt-4 flex gap-2">
-          <button
-            (click)="copyUrl(image); $event.stopPropagation()"
-            class="p-2 text-gray-600 hover:text-indigo-600"
-            title="Copy URL"
+      <!-- Image -->
+      <div class="relative">
+        <img
+          [src]="image.url"
+          [alt]="image.name"
+          class="w-full h-56 object-cover"
+        />
+        <!-- Overlay on hover -->
+        <div
+          class="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300"
+        >
+          <span class="text-white text-sm font-semibold"
+            >Click to copy URL</span
           >
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-              ></path>
-            </svg>
-          </button>
-          <button
-            (click)="toggleForm(image); $event.stopPropagation()"
-            class="p-2 text-gray-600 hover:text-indigo-600"
-            title="Edit"
-          >
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-              ></path>
-            </svg>
-          </button>
-          <button
-            (click)="deleteImage(image.id); $event.stopPropagation()"
-            class="p-2 text-gray-600 hover:text-red-600"
-            title="Delete"
-          >
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4M9 7v12m6-12v12M3 7h18"
-              ></path>
-            </svg>
-          </button>
         </div>
       </div>
-    </div>
-    }
-  </div>
-
-  @if (images.length === 0) {
-  <div class="text-center py-8 text-gray-500">No images uploaded yet</div>
-  }
-
-  <!-- Pagination -->
-  @if (totalPages > 1) {
-  <div class="flex justify-center items-center mt-6 gap-4">
-    <button
-      (click)="changePage(-1)"
-      [disabled]="currentPage === 1"
-      class="p-2 text-gray-600 hover:text-indigo-600 disabled:text-gray-300"
-    >
-      <svg
-        class="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
+      <!-- Card Content -->
+      <div class="p-4">
+        <h3 class="text-lg font-semibold text-gray-800 truncate">
+          {{ image.name }}
+        </h3>
+        <p class="text-gray-600 text-sm mt-1 line-clamp-2">
+          {{ image.description }}
+        </p>
+      </div>
+      <!-- Action Buttons -->
+      <div
+        *ngIf="isOwner(image) || isAdminOrModerator"
+        class="absolute top-2 right-2 flex gap-2"
       >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M15 19l-7-7 7-7"
-        ></path>
-      </svg>
+        <button
+          (click)="onEdit.emit(image); $event.stopPropagation()"
+          class="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors duration-200"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+            />
+          </svg>
+        </button>
+        <button
+          (click)="onDelete.emit(image); $event.stopPropagation()"
+          class="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors duration-200"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4M5 7h14m-9 3v8m4-8v8"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="mt-6 flex justify-center gap-2" *ngIf="totalPages > 1">
+    <button
+      (click)="loadImages(currentPage - 1)"
+      [disabled]="currentPage === 1"
+      class="px-4 py-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors duration-200"
+    >
+      Previous
     </button>
-    <span class="text-gray-700"
+    <span class="self-center text-gray-700"
       >Page {{ currentPage }} of {{ totalPages }}</span
     >
     <button
-      (click)="changePage(1)"
+      (click)="loadImages(currentPage + 1)"
       [disabled]="currentPage === totalPages"
-      class="p-2 text-gray-600 hover:text-indigo-600 disabled:text-gray-300"
+      class="px-4 py-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors duration-200"
     >
-      <svg
-        class="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M9 5l7 7-7 7"
-        ></path>
-      </svg>
+      Next
     </button>
   </div>
-  }
 </div>

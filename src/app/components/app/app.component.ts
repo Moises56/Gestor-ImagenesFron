@@ -1,14 +1,22 @@
 import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
-import { ImageGalleryComponent } from '../image-gallery/image-gallery.component';
 import { CommonModule } from '@angular/common';
+import { RouterOutlet } from '@angular/router';
+import { NavbarComponent } from '../navbar/navbar.component';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, CommonModule, ImageGalleryComponent],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.css'
+  standalone: true,
+  imports: [CommonModule, RouterOutlet],
+  template: `
+    <div class="min-h-screen bg-gray-50">
+      <!-- <app-navbar></app-navbar> -->
+      <main>
+        <router-outlet></router-outlet>
+      </main>
+    </div>
+  `,
 })
 export class AppComponent {
-  title = 'gestor-img';
+  constructor(public authService: AuthService) {}
 }

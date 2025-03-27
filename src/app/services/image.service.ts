@@ -1,32 +1,34 @@
-// image.service.ts
+// src/app/services/image.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, Subject, map } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, map, throwError } from 'rxjs';
 import { environment } from '@environments/environment';
-
-export interface ImageDto {
-  id?: number;
-  name: string;
-  url: string;
-  description?: string;
-  createdAt?: Date;
-}
-
-export interface PaginatedImages {
-  data: ImageDto[];
-  total: number;
-  page: number;
-  totalPages: number;
-}
+import {
+  Image,
+  ImageUploadRequest,
+  ImageUpdateRequest,
+  PaginatedResponse,
+  ApiResponse,
+  ApiErrorResponse,
+} from '../interfaces/image.interface';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ImageService {
   private apiUrl = `${environment.apiUrl}/images`;
-  private imageUploaded = new Subject<ImageDto>();
 
   constructor(private http: HttpClient) {}
+
+  private getAuthHeaders(): HttpHeaders {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('No authentication token found. Please log in.');
+    }
+    return new HttpHeaders({
+      Authorization: `Bearer ${token}`,
+    });
+  }
 
   private ensureAbsoluteUrl(url: string): string {
     if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -35,45 +37,145 @@ export class ImageService {
     return `${environment.apiUrl}${url}`;
   }
 
-  uploadImage(formData: FormData): Observable<ImageDto> {
-    return this.http.post<ImageDto>(`${this.apiUrl}/upload`, formData).pipe(
-      map(response => ({
-        ...response,
-        url: this.ensureAbsoluteUrl(response.url)
-      }))
-    );
+  getUserImages(
+    page: number = 1,
+    limit: number = 10
+  ): Observable<PaginatedResponse<Image>> {
+    try {
+      const headers = this.getAuthHeaders();
+      const timestamp = new Date().getTime(); // Cache-busting parameter
+      return this.http
+        .get<PaginatedResponse<Image>>(
+          `${this.apiUrl}?page=${page}&limit=${limit}&_=${timestamp}`,
+          { headers }
+        )
+        .pipe(
+          map((response) => {
+            if (!response.success) {
+              throw new Error(response.message || 'Failed to fetch images'); // message is now optional
+            }
+            return {
+              ...response,
+              data: response.data.map((img) => ({
+                ...img,
+                url: this.ensureAbsoluteUrl(img.url),
+              })),
+            };
+          })
+        );
+    } catch (error) {
+      console.error('Error in getUserImages:', error);
+      return throwError(
+        () => new Error('Authentication error: No token found.')
+      );
+    }
   }
 
-  getAllImages(page: number = 1, limit: number = 10): Observable<PaginatedImages> {
-    return this.http.get<PaginatedImages>(`${this.apiUrl}?page=${page}&limit=${limit}`).pipe(
-      map(response => ({
-        ...response,
-        data: response.data.map(img => ({
-          ...img,
-          url: this.ensureAbsoluteUrl(img.url)
-        }))
-      }))
-    );
+  getImageById(imageId: string): Observable<Image> {
+    try {
+      const headers = this.getAuthHeaders();
+      return this.http
+        .get<ApiResponse<Image>>(`${this.apiUrl}/${imageId}`, { headers })
+        .pipe(
+          map((response) => {
+            if (!response.success || !response.data) {
+              throw new Error(response.message || 'Failed to fetch image');
+            }
+            return {
+              ...response.data,
+              url: this.ensureAbsoluteUrl(response.data.url),
+            };
+          })
+        );
+    } catch (error) {
+      console.error('Error in getImageById:', error);
+      return throwError(
+        () => new Error('Authentication error: No token found.')
+      );
+    }
   }
 
-  updateImage(id: number, image: Partial<ImageDto>): Observable<ImageDto> {
-    return this.http.put<ImageDto>(`${this.apiUrl}/${id}`, image).pipe(
-      map(response => ({
-        ...response,
-        url: this.ensureAbsoluteUrl(response.url)
-      }))
-    );
+  uploadImage(imageData: ImageUploadRequest): Observable<Image> {
+    try {
+      const headers = this.getAuthHeaders();
+      const formData = new FormData();
+      formData.append('file', imageData.file);
+      formData.append('name', imageData.name);
+      if (imageData.description) {
+        formData.append('description', imageData.description);
+      }
+      return this.http
+        .post<ApiResponse<Image>>(`${this.apiUrl}/upload`, formData, {
+          headers,
+        })
+        .pipe(
+          map((response) => {
+            if (!response.success || !response.data) {
+              throw new Error(response.message || 'Failed to upload image');
+            }
+            return {
+              ...response.data,
+              url: this.ensureAbsoluteUrl(response.data.url),
+            };
+          })
+        );
+    } catch (error) {
+      console.error('Error in uploadImage:', error);
+      return throwError(
+        () => new Error('Authentication error: No token found.')
+      );
+    }
   }
 
-  deleteImage(id: number): Observable<{ message: string }> {
-    return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`);
+  updateImage(
+    imageId: string,
+    imageData: ImageUpdateRequest
+  ): Observable<Image> {
+    try {
+      const headers = this.getAuthHeaders();
+      return this.http
+        .put<ApiResponse<Image>>(`${this.apiUrl}/${imageId}`, imageData, {
+          headers,
+        })
+        .pipe(
+          map((response) => {
+            if (!response.success || !response.data) {
+              throw new Error(response.message || 'Failed to update image');
+            }
+            return {
+              ...response.data,
+              url: this.ensureAbsoluteUrl(response.data.url),
+            };
+          })
+        );
+    } catch (error) {
+      console.error('Error in updateImage:', error);
+      return throwError(
+        () => new Error('Authentication error: No token found.')
+      );
+    }
   }
 
-  notifyImageUploaded(image: ImageDto) {
-    this.imageUploaded.next(image);
-  }
-
-  onImageUploaded(): Observable<ImageDto> {
-    return this.imageUploaded.asObservable();
+  deleteImage(imageId: string): Observable<{ message: string }> {
+    try {
+      const headers = this.getAuthHeaders();
+      return this.http
+        .delete<ApiResponse<{ message: string }>>(`${this.apiUrl}/${imageId}`, {
+          headers,
+        })
+        .pipe(
+          map((response) => {
+            if (!response.success) {
+              throw new Error(response.message || 'Failed to delete image');
+            }
+            return response.data || { message: 'Image deleted successfully' };
+          })
+        );
+    } catch (error) {
+      console.error('Error in deleteImage:', error);
+      return throwError(
+        () => new Error('Authentication error: No token found.')
+      );
+    }
   }
 }
