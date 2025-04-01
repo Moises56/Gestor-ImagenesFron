@@ -1,7 +1,7 @@
 // src/app/services/auth.service.ts
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap, catchError } from 'rxjs';
+import { BehaviorSubject, Observable, tap, catchError, of, throwError, map } from 'rxjs';
 import { environment } from '@environments/environment';
 import {
   LoginRequest,
@@ -38,22 +38,49 @@ export class AuthService {
 
     if (isPlatformBrowser(this.platformId)) {
       const token = localStorage.getItem('token');
+      const storedUser = sessionStorage.getItem('user');
+      
       if (token) {
+        // Si tenemos un usuario almacenado, lo restauramos inmediatamente
+        if (storedUser) {
+          try {
+            const user = JSON.parse(storedUser);
+            this.userSubject.next(user);
+          } catch (error) {
+            console.error('Error parsing stored user:', error);
+            sessionStorage.removeItem('user');
+          }
+        }
+
         this.isCheckingToken = true;
         this.getProfile().subscribe({
           next: (user) => {
             console.log('Profile fetched successfully:', user);
+            this.userSubject.next(user);
+            if (isPlatformBrowser(this.platformId)) {
+              sessionStorage.setItem('user', JSON.stringify(user));
+            }
             this.isCheckingToken = false;
           },
           error: (err) => {
             console.error('Error fetching profile on checkToken:', err);
-            this.logout();
-            this.router.navigate(['/login']);
-            this.isCheckingToken = false;
+            if (err.status === 401) {
+              console.log('Token invalid or expired, logging out');
+              this.logout();
+              this.router.navigate(['/login']);
+            } else {
+              console.log('Non-401 error, keeping existing session');
+              // Mantener la sesión existente si no es un error de autenticación
+              this.isCheckingToken = false;
+            }
           },
         });
       } else {
         console.log('No token found on checkToken');
+        this.userSubject.next(null);
+        if (storedUser) {
+          sessionStorage.removeItem('user');
+        }
       }
     }
   }
@@ -65,6 +92,7 @@ export class AuthService {
     }
     return new HttpHeaders({
       Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
     });
   }
 
@@ -75,8 +103,13 @@ export class AuthService {
         tap((response) => {
           if (isPlatformBrowser(this.platformId)) {
             localStorage.setItem('token', response.access_token);
+            sessionStorage.setItem('user', JSON.stringify(response.user));
           }
           this.userSubject.next(response.user);
+        }),
+        catchError((error) => {
+          console.error('Login error:', error);
+          throw error;
         })
       );
   }
@@ -86,18 +119,24 @@ export class AuthService {
   }
 
   getProfile(): Observable<User> {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return throwError(() => new Error('Not logged in'));
+    }
+
     return this.http
       .get<User>(`${this.apiUrl}/profile`, { headers: this.getAuthHeaders() })
       .pipe(
         tap((user) => {
           this.userSubject.next(user);
+          if (isPlatformBrowser(this.platformId)) {
+            sessionStorage.setItem('user', JSON.stringify(user));
+          }
         }),
         catchError((err) => {
           console.error('Error in getProfile:', err);
           if (err.status === 401) {
-            console.log('Unauthorized: Token may be invalid or expired');
             this.logout();
-            this.router.navigate(['/login']);
           }
           throw err;
         })
@@ -107,14 +146,17 @@ export class AuthService {
   logout() {
     if (isPlatformBrowser(this.platformId)) {
       localStorage.removeItem('token');
+      sessionStorage.removeItem('user');
     }
     this.userSubject.next(null);
   }
 
   isLoggedIn(): boolean {
-    return (
-      isPlatformBrowser(this.platformId) && !!localStorage.getItem('token')
-    );
+    if (!isPlatformBrowser(this.platformId)) {
+      return false;
+    }
+    const token = localStorage.getItem('token');
+    return !!token;
   }
 
   getUsers(
@@ -132,10 +174,44 @@ export class AuthService {
     if (email) {
       params = params.set('email', email);
     }
+
     return this.http.get<PaginatedResponse<User>>(`${this.apiUrl}/users`, {
       headers: this.getAuthHeaders(),
       params,
-    });
+    }).pipe(
+      tap(response => {
+        if (!response) {
+          console.error('Empty response from users endpoint');
+        }
+      }),
+      map(response => {
+        // Asegurarnos de que la respuesta tenga la estructura correcta
+        if (!response) {
+          return {
+            success: false,
+            data: [],
+            pagination: {
+              total: 0,
+              page: 1,
+              totalPages: 1,
+              hasMore: false
+            }
+          };
+        }
+
+        // Asegurarnos de que la paginación exista
+        if (!response.pagination) {
+          response.pagination = {
+            total: response.data?.length || 0,
+            page: page,
+            totalPages: 1,
+            hasMore: false
+          };
+        }
+
+        return response;
+      })
+    );
   }
 
   updateUser(userId: string, userData: Partial<User>): Observable<User> {
@@ -150,8 +226,6 @@ export class AuthService {
     });
   }
 
-  // Updated method for user to change their own password
-  
   changePassword(
     request: ChangePasswordRequest
   ): Observable<ChangePasswordResponse> {
@@ -172,7 +246,6 @@ export class AuthService {
       );
   }
 
-  // New method for admin to change another user's password
   adminChangePassword(
     userId: string,
     request: AdminChangePasswordRequest

@@ -1,4 +1,3 @@
-<!-- src/app/pages/users/users.component.html -->
 <div class="p-6 min-h-screen mx-auto max-w-7xl">
   <!-- Error Message -->
   <div
@@ -84,8 +83,95 @@
     </form>
   </div>
 
-  <!-- Table -->
-  <div class="overflow-x-auto">
+  <!-- Mobile Cards View -->
+  <div class="sm:hidden grid grid-cols-1 gap-4">
+    <div
+      *ngFor="let user of users"
+      class="bg-white rounded-lg shadow-md p-4 border border-gray-200"
+    >
+      <div class="space-y-2">
+        <div class="flex justify-between items-start">
+          <div>
+            <h3 class="font-semibold text-gray-800">{{ user.name }}</h3>
+            <p class="text-sm text-gray-600">{{ user.email }}</p>
+          </div>
+          <span
+            class="px-2 py-1 text-xs rounded-full"
+            [ngClass]="{
+              'bg-blue-100 text-blue-800': user.role === 'ADMIN',
+              'bg-green-100 text-green-800': user.role === 'USER',
+              'bg-yellow-100 text-yellow-800': user.role === 'MODERATOR'
+            }"
+          >
+            {{ user.role }}
+          </span>
+        </div>
+        <div class="text-xs text-gray-500 truncate">ID: {{ user.id }}</div>
+        <div class="flex justify-end space-x-2 pt-2">
+          <button
+            (click)="openModal(user)"
+            class="p-2 bg-yellow-500 text-white rounded-full hover:bg-yellow-600 transition-colors"
+            title="Editar"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5m-4-8l8 8m-8-8v8"
+              />
+            </svg>
+          </button>
+          <button
+            (click)="deleteUser(user.id)"
+            class="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+            title="Eliminar"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3"
+              />
+            </svg>
+          </button>
+          <button
+            (click)="openPasswordModal(user)"
+            class="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
+            title="Cambiar Contraseña"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desktop/Tablet Table View -->
+  <div class="hidden sm:block overflow-x-auto">
     <table class="w-full text-left border-collapse">
       <thead class="bg-gray-100">
         <tr>
@@ -98,7 +184,7 @@
       </thead>
       <tbody>
         <tr
-          *ngFor="let user of users; let i = index"
+          *ngFor="let user of users"
           class="border-b hover:bg-gray-50 transition-colors"
         >
           <td class="p-4 text-sm text-gray-600 truncate max-w-[150px]">
@@ -106,7 +192,18 @@
           </td>
           <td class="p-4 text-sm text-gray-600">{{ user.name }}</td>
           <td class="p-4 text-sm text-gray-600">{{ user.email }}</td>
-          <td class="p-4 text-sm text-gray-600">{{ user.role }}</td>
+          <td class="p-4 text-sm text-gray-600">
+            <span
+              class="px-2 py-1 text-xs rounded-full"
+              [ngClass]="{
+                'bg-blue-100 text-blue-800': user.role === 'ADMIN',
+                'bg-green-100 text-green-800': user.role === 'USER',
+                'bg-yellow-100 text-yellow-800': user.role === 'MODERATOR'
+              }"
+            >
+              {{ user.role }}
+            </span>
+          </td>
           <td class="p-4 flex space-x-2">
             <button
               (click)="openModal(user)"
@@ -169,12 +266,14 @@
         </tr>
       </tbody>
     </table>
-    <div
-      *ngIf="users.length === 0 && !errorMessage"
-      class="text-center py-6 text-gray-500"
-    >
-      No hay usuarios registrados.
-    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div
+    *ngIf="users.length === 0 && !errorMessage"
+    class="text-center py-6 text-gray-500"
+  >
+    No hay usuarios registrados.
   </div>
 
   <!-- Pagination -->

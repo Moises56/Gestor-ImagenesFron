@@ -93,18 +93,40 @@ export class UsersComponent implements OnInit {
       .getUsers(this.currentPage, this.pageSize, name, email)
       .subscribe({
         next: (response: PaginatedResponse<User>) => {
+          if (!response) {
+            console.error('Received empty response from server');
+            this.users = [];
+            this.totalPages = 1;
+            this.currentPage = 1;
+            return;
+          }
+
           this.users = response.data || [];
-          this.totalPages = response.pagination.totalPages || 1;
-          this.currentPage = response.pagination.page || 1;
+          
+          // Manejo seguro de la paginación
+          if (response.pagination) {
+            this.totalPages = response.pagination.totalPages || 1;
+            this.currentPage = response.pagination.page || 1;
+          } else {
+            // Si no hay información de paginación, asumimos una página
+            this.totalPages = 1;
+            this.currentPage = 1;
+          }
+
           if (this.users.length === 0) {
             this.toastr.info('No hay usuarios registrados.', 'Información');
           }
         },
         error: (err) => {
+          console.error('Error loading users:', err);
           this.errorMessage =
             err.error?.message ||
             'Error al cargar los usuarios. Intenta de nuevo más tarde.';
           this.toastr.error(this.errorMessage || 'Error desconocido', 'Error');
+          // En caso de error, establecemos valores por defecto
+          this.users = [];
+          this.totalPages = 1;
+          this.currentPage = 1;
         },
       });
   }

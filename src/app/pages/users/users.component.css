@@ -26,9 +26,9 @@
     white-space: nowrap;
   }
   
-  .hidden {
+  /* .hidden {
     display: none;
-  }
+  } */
   
   .block {
     display: block;

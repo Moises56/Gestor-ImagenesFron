@@ -5,7 +5,7 @@ import { RouterModule, Router } from '@angular/router';
 import { ImageUploadComponent } from '../../components/image-upload/image-upload.component';
 import { ImageGalleryComponent } from '../../components/image-gallery/image-gallery.component';
 import { ImageEditComponent } from '../../components/app-image-edit/app-image-edit.component';
-import { ChangePasswordComponent } from '../../components/change-password/change-password.component'; // Import the new component
+import { ChangePasswordComponent } from '../../components/change-password/change-password.component';
 import { AuthService } from '../../services/auth.service';
 import { ImageService } from '../../services/image.service';
 import { ToastrService } from 'ngx-toastr';
@@ -22,7 +22,7 @@ import { Image } from '../../interfaces/image.interface';
     ImageUploadComponent,
     ImageGalleryComponent,
     ImageEditComponent,
-    ChangePasswordComponent, // Add to imports
+    ChangePasswordComponent,
     FormsModule,
     UsersComponent,
   ],
@@ -384,7 +384,7 @@ import { Image } from '../../interfaces/image.interface';
 export class DashboardComponent implements OnInit {
   @ViewChild('imageGallery') imageGallery?: ImageGalleryComponent;
 
-  activeView: 'gallery' | 'upload' | 'users' | 'change-password' = 'gallery'; // Add new view
+  activeView: 'gallery' | 'upload' | 'users' | 'change-password' = 'gallery';
   showEditModal = false;
   selectedImage: Image | null = null;
   isSidebarOpen = false;
@@ -400,26 +400,9 @@ export class DashboardComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    if (!this.authService.isLoggedIn()) {
-      this.toastr.error(
-        'Por favor, inicia sesión para acceder al dashboard.',
-        'No autenticado'
-      );
-      this.router.navigate(['/login']);
-      return;
-    }
-
     this.authService.user$.subscribe((user) => {
       this.user = user;
       this.userEmail = user?.email || null;
-      if (!user && this.authService.isLoggedIn()) {
-        this.toastr.error(
-          'Sesión expirada. Por favor, inicia sesión nuevamente.',
-          'No autenticado'
-        );
-        this.authService.logout();
-        this.router.navigate(['/login']);
-      }
     });
 
     this.checkScreenSize();

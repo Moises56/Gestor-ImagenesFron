@@ -1,7 +1,8 @@
 // formulario-img.component.ts
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { ImageService, ImageDto } from '../../services/image.service';
+import { ImageService } from '../../services/image.service';
 import { FormsModule } from '@angular/forms';
+import { ImageUploadRequest, Image } from '../../interfaces/image.interface';
 
 @Component({
   selector: 'app-formulario-img',
@@ -11,7 +12,7 @@ import { FormsModule } from '@angular/forms';
   styleUrls: ['./formulario-img.component.css'],
 })
 export class FormularioImgComponent {
-  @Input() editImage: ImageDto | null = null;
+  @Input() editImage: Image | null = null;
   @Output() close = new EventEmitter<void>();
 
   name: string = '';
@@ -60,22 +61,15 @@ export class FormularioImgComponent {
           },
         });
     } else if (this.file) {
-      // Create new image or update with new file
-      const formData = new FormData();
-      formData.append('file', this.file);
-      formData.append('name', this.name);
-      if (this.description) formData.append('description', this.description);
+      // Create new image
+      const imageData: ImageUploadRequest = {
+        file: this.file,
+        name: this.name,
+        description: this.description || undefined,
+      };
 
-      this.imageService.uploadImage(formData).subscribe({
+      this.imageService.uploadImage(imageData).subscribe({
         next: (response) => {
-          const newImage: ImageDto = {
-            id: this.editImage?.id,
-            name: this.name,
-            url: response.url,
-            description: this.description,
-            createdAt: this.editImage?.createdAt || new Date(),
-          };
-          this.imageService.notifyImageUploaded(newImage);
           this.uploadSuccess = true;
           this.errorMessage = '';
           this.resetForm();

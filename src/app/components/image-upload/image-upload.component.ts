@@ -235,38 +235,56 @@ export class ImageUploadComponent {
   }
 
   onSubmit() {
-    if (this.uploadForm.invalid || !this.selectedFile) {
-      this.toastr.error(
-        'Por favor, completa todos los campos requeridos y selecciona una imagen.',
-        'Error'
-      );
-      this.uploadForm.markAllAsTouched();
-      return;
+    if (this.uploadForm.valid && this.selectedFile) {
+      this.isLoading = true;
+      const formData: ImageUploadRequest = {
+        file: this.selectedFile,
+        name: this.uploadForm.get('name')?.value,
+        description: this.uploadForm.get('description')?.value,
+      };
+
+      this.imageService.uploadImage(formData).subscribe({
+        next: (response) => {
+          console.log('Image uploaded successfully:', response);
+          this.toastr.success('Imagen subida exitosamente');
+          this.uploaded.emit();
+          this.resetForm();
+        },
+        error: (error) => {
+          console.error('Error uploading image:', error);
+          let errorMessage = 'Error al subir la imagen';
+          
+          if (error.message.includes('File too large')) {
+            errorMessage = 'La imagen es demasiado grande. Por favor, elige una imagen más pequeña.';
+          } else if (error.message.includes('Unsupported file type')) {
+            errorMessage = 'Tipo de archivo no soportado. Por favor, sube una imagen válida.';
+          } else if (error.message.includes('Authentication error')) {
+            errorMessage = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
+          } else if (error.error?.message) {
+            errorMessage = error.error.message;
+          }
+          
+          this.toastr.error(errorMessage);
+        },
+        complete: () => {
+          this.isLoading = false;
+        }
+      });
+    } else {
+      this.toastr.error('Por favor, completa todos los campos requeridos');
+      Object.keys(this.uploadForm.controls).forEach(key => {
+        const control = this.uploadForm.get(key);
+        if (control?.invalid) {
+          control.markAsTouched();
+        }
+      });
     }
+  }
 
-    this.isLoading = true;
-    const imageData: ImageUploadRequest = {
-      file: this.selectedFile,
-      name: this.uploadForm.get('name')?.value,
-      description: this.uploadForm.get('description')?.value || undefined,
-    };
-
-    this.imageService.uploadImage(imageData).subscribe({
-      next: () => {
-        this.isLoading = false;
-        this.toastr.success('Imagen subida exitosamente.', 'Éxito');
-        this.uploadForm.reset();
-        this.clearFile();
-        this.uploaded.emit();
-      },
-      error: (error) => {
-        console.error('Error al subir la imagen:', error);
-        this.toastr.error(
-          error.error?.message || 'Error al subir la imagen.',
-          'Error'
-        );
-        this.isLoading = false;
-      },
-    });
+  private resetForm() {
+    this.uploadForm.reset();
+    this.selectedFile = null;
+    this.imagePreview = null;
+    this.isLoading = false;
   }
 }
